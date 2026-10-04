@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { formatTime } from "@/lib/date-time";
 import { formatDate } from "@/lib/tasks";
 import { Check, Clock3, RotateCw } from "lucide-react";
 import type { Task } from "@/lib/tasks";
@@ -12,22 +13,38 @@ export function CategoryTag({ category }: { category: Task["category"] }) {
     </span>
   );
 }
-export function CompletionButton({ task }: { task: Task }) {
+export function CompletionButton({
+  task,
+  fullLabel = false,
+}: {
+  task: Task;
+  fullLabel?: boolean;
+}) {
   const { toggle, ready } = useDay();
   const [busy, setBusy] = useState(false);
   return (
     <button
-      className={`check-button ${task.completed ? "checked" : ""}`}
+      className={
+        fullLabel
+          ? "primary-button"
+          : `check-button ${task.completed ? "checked" : ""}`
+      }
       disabled={!ready || busy}
       onClick={async () => {
         setBusy(true);
         await toggle(task.id);
         setBusy(false);
       }}
-      aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`}
+      aria-label={
+        fullLabel
+          ? `${task.completed ? "Reopen task" : "Mark complete"}: ${task.title}`
+          : `${task.completed ? "Reopen" : "Complete"} ${task.title}`
+      }
       aria-pressed={task.completed}
     >
-      {task.completed && <Check size={16} />}
+      {(task.completed || fullLabel) && <Check size={16} />}
+      {fullLabel &&
+        (busy ? "Saving…" : task.completed ? "Reopen task" : "Mark complete")}
     </button>
   );
 }
@@ -101,8 +118,4 @@ export function Panel({
     </section>
   );
 }
-export function formatTime(time: string | null) {
-  if (!time) return "Anytime";
-  const [h, m] = time.split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
-}
+export { formatTime } from "@/lib/date-time";

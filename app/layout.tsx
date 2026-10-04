@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TaskProvider } from "@/components/task-provider";
+import { ScheduleProvider } from "@/components/schedule-provider";
 import { AppShell } from "@/components/app-shell";
 export const metadata: Metadata = {
   title: "Daywell · Your personal command center",
@@ -27,7 +28,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <TaskProvider>
-          <AppShell>{children}</AppShell>
+          <ScheduleProvider>
+            <AppShell>{children}</AppShell>
+          </ScheduleProvider>
         </TaskProvider>
       </body>
     </html>

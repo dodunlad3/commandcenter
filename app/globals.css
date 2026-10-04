@@ -1499,3 +1499,201 @@ button:disabled {
     width: calc(100% - 32px);
   }
 }
+
+/* Build 3 reuses the existing cards, category colors, and touch controls. */
+.sidebar {
+  overflow-y: auto;
+}
+.schedule-controls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.schedule-controls .task-views {
+  margin-bottom: 0;
+}
+.schedule-date {
+  max-width: 260px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.schedule-help {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 16px 0 20px;
+}
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+.schedule-grid.date-view {
+  grid-template-columns: minmax(0, 860px);
+}
+.schedule-day .panel-heading h2 {
+  text-transform: capitalize;
+  font-size: 20px;
+}
+.routine-row {
+  width: 100%;
+  min-height: 64px;
+  display: block;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.routine-row:hover .task-title {
+  color: var(--accent);
+}
+.routine-time {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.flexible-area {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 18px;
+}
+.flexible-area h3 {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+.flexible-area > .muted,
+.schedule-empty {
+  font-size: 13px;
+}
+.flexible-area .routine-row:first-of-type {
+  border-top: 0;
+}
+.open-windows {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.open-windows summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+}
+.open-windows summary::before {
+  content: "+";
+  margin-right: 8px;
+}
+.open-windows[open] summary::before {
+  content: "−";
+}
+.open-windows p {
+  padding: 6px 0;
+}
+.open-windows p span {
+  margin-left: 8px;
+}
+.open-windows .form-note {
+  margin: 8px 0 0;
+}
+.scope-note,
+.override-notice {
+  padding: 14px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.override-notice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.scope-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.scope-choice p {
+  color: var(--muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.scope-choice .form-note {
+  margin: 0;
+}
+form .delete-button {
+  gap: 8px;
+  margin-top: 12px;
+}
+.event-kind {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+.focus-bottom > span {
+  flex-wrap: wrap;
+}
+.timeline-copy > .timeline-duration {
+  display: block;
+}
+.routine-event .timeline-point {
+  border-radius: 2px;
+  background: var(--muted);
+}
+.open-event {
+  min-height: 60px;
+}
+.open-event .timeline-point {
+  background: transparent;
+  border: 1px dashed var(--muted);
+}
+.open-event .timeline-title {
+  color: var(--muted);
+  font-size: 13px;
+}
+.optional-routine {
+  opacity: 0.65;
+}
+.energy-suggestions .task-row {
+  padding: 12px 0;
+}
+.energy-suggestions .text-link {
+  min-height: 44px;
+  background: none;
+  text-align: left;
+}
+@media (min-width: 1500px) {
+  .schedule-grid:not(.date-view) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .schedule-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .schedule-controls .task-views {
+    display: flex;
+  }
+  .schedule-date {
+    max-width: 100%;
+    width: 100%;
+  }
+  .schedule-grid {
+    gap: 18px;
+  }
+  .day-heading {
+    flex-wrap: wrap;
+  }
+}

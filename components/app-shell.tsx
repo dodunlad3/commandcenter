@@ -3,10 +3,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useDay } from "./task-provider";
+import { useSchedule } from "./schedule-provider";
+import { ScheduleDialogs } from "./schedule-dialogs";
 import { TaskDialogs } from "./task-dialogs";
 import {
   LayoutDashboard,
   CheckCheck,
+  CalendarDays,
   BriefcaseBusiness,
   Dumbbell,
   Clapperboard,
@@ -24,6 +27,7 @@ import { navigation } from "@/lib/tasks";
 const icons = [
   LayoutDashboard,
   CheckCheck,
+  CalendarDays,
   BriefcaseBusiness,
   Dumbbell,
   Clapperboard,
@@ -35,6 +39,7 @@ const icons = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { capture, ready, storageError, reload } = useDay();
+  const schedule = useSchedule();
   const [light, setLight] = useState(false);
   const [menu, setMenu] = useState(false);
   return (
@@ -134,15 +139,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           )}
+          {schedule.storageError && (
+            <div className="storage-error" role="alert">
+              <p>{schedule.storageError}</p>
+              <button
+                className="outline-button"
+                onClick={() => void schedule.reload()}
+              >
+                Reload schedule
+              </button>
+            </div>
+          )}
           {children}
         </main>
         <footer className="page-footer">
           <span>Make room for what matters.</span>
-          <span>DAYWELL / V.01</span>
+          <span>DAYWELL / V.03</span>
         </footer>
       </div>
       <nav className="bottom-nav" aria-label="Mobile navigation">
-        {[0, 1, 5].map((i) => {
+        {[0, 1, 2].map((i) => {
           const label = navigation[i];
           const Icon = icons[i];
           const href = i === 0 ? "/" : `/${label.toLowerCase()}`;
@@ -164,6 +180,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </nav>
       <TaskDialogs />
+      <ScheduleDialogs />
     </div>
   );
 }

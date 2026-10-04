@@ -1,23 +1,15 @@
 "use client";
+import { Coffee, Flame, Leaf, Plus, Sunrise } from "lucide-react";
+import { localDate } from "@/lib/tasks";
 import {
-  Check,
-  Clock3,
-  Coffee,
-  Flame,
-  Leaf,
-  Plus,
-  Sunrise,
-} from "lucide-react";
-import Link from "next/link";
-import { localDate, compareScheduled } from "@/lib/tasks";
+  RightNowCard,
+  UpNextCard,
+  StillOpenCard,
+  EnergySuggestions,
+  TodayTimeline,
+} from "./today-agenda";
 import { useDay } from "./task-provider";
-import {
-  CategoryTag,
-  CompletionButton,
-  formatTime,
-  Panel,
-  TaskRow,
-} from "./task-components";
+import { Panel, TaskRow } from "./task-components";
 export function TodayDashboard() {
   const {
     tasks: allTasks,
@@ -27,8 +19,6 @@ export function TodayDashboard() {
     energy,
     setEnergy,
     capture,
-    toggle,
-    openTask,
   } = useDay();
   if (!now || !ready)
     return (
@@ -43,13 +33,6 @@ export function TodayDashboard() {
   );
   const done = tasks.filter((t) => t.completed).length;
   const progress = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
-  const remaining = tasks
-    .filter((t) => !t.completed)
-    .sort((a, b) =>
-      (a.scheduledTime || "99:99").localeCompare(b.scheduledTime || "99:99"),
-    );
-  const current = remaining[0];
-  const next = remaining[1];
   const priorities = tasks.filter((t) => t.priority === "high").slice(0, 3);
   const hour = now.getHours();
   return (
@@ -77,93 +60,9 @@ export function TodayDashboard() {
       </div>
       <div className="dashboard-grid">
         <div className="left-column">
-          <section className="focus-card">
-            <div className="focus-top">
-              <span className="eyebrow">
-                <span className="pulse-dot" /> RIGHT NOW
-              </span>
-              <span className="focus-count">FOCUS / 01</span>
-            </div>
-            {current ? (
-              <>
-                <CategoryTag category={current.category} />
-                <h2>
-                  <button
-                    className="task-title-button"
-                    onClick={() => openTask(current.id)}
-                    aria-label={`View task: ${current.title}`}
-                  >
-                    {current.title}
-                  </button>
-                </h2>
-                <p>
-                  {current.description ||
-                    "Make a little room and take the next step."}
-                </p>
-                <div className="focus-bottom">
-                  <span>
-                    <Clock3 size={17} />
-                    {current.estimatedMinutes} min{" "}
-                    <span className="meta-divider">/</span>{" "}
-                    {formatTime(current.scheduledTime)}
-                  </span>
-                  <button
-                    className="primary-button"
-                    onClick={() => toggle(current.id)}
-                  >
-                    <Check size={18} /> Mark complete
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h2>A little breathing room.</h2>
-                <p>
-                  {tasks.length
-                    ? "You’ve completed everything for today. Enjoy the space."
-                    : "Nothing scheduled for today. Capture a task when you’re ready."}
-                </p>
-                <button className="primary-button" onClick={capture}>
-                  <Plus size={18} />
-                  Capture something new
-                </button>
-              </>
-            )}
-          </section>
-          <Panel
-            title="Up next"
-            aside={<span className="subtle">KEEP THE MOMENTUM</span>}
-            className="up-next"
-          >
-            {next ? (
-              <div className="next-content">
-                <span className={`next-icon ${next.category}`}>
-                  <Clock3 size={24} />
-                </span>
-                <div>
-                  <h3>
-                    <button
-                      className="task-title-button"
-                      onClick={() => openTask(next.id)}
-                      aria-label={`View task: ${next.title}`}
-                    >
-                      {next.title}
-                    </button>
-                  </h3>
-                  <div className="task-meta">
-                    <CategoryTag category={next.category} />
-                    <span>{formatTime(next.scheduledTime)}</span>
-                    <span>{next.estimatedMinutes} min</span>
-                  </div>
-                </div>
-                <CompletionButton task={next} />
-              </div>
-            ) : (
-              <p className="muted">
-                Nothing waiting. Take a moment for yourself.
-              </p>
-            )}
-          </Panel>
+          <RightNowCard />
+          <UpNextCard />
+          <StillOpenCard />
           <Panel
             title="Top 3 priorities"
             aside={
@@ -260,59 +159,9 @@ export function TodayDashboard() {
                 </button>
               ))}
             </div>
-            <p className="energy-note">
-              {energy === "Low"
-                ? "Go gently. Make space for a slower pace."
-                : energy === "Locked In"
-                  ? "Find your flow. Give one thing your full attention."
-                  : "A steady pace is a great place to be."}
-            </p>
+            <EnergySuggestions />
           </Panel>
-          <Panel
-            title="The shape of your day"
-            aside={
-              <Link className="text-link" href="/tasks">
-                View tasks
-              </Link>
-            }
-            className="timeline-panel"
-          >
-            <div className="timeline">
-              {!tasks.length && (
-                <p className="muted">Your timeline is clear today.</p>
-              )}
-              {[...tasks].sort(compareScheduled).map((task) => (
-                <div
-                  key={task.id}
-                  className={`timeline-item ${task.completed ? "completed" : ""} ${task.id === current?.id ? "current" : ""}`}
-                >
-                  <span className="timeline-time">
-                    {formatTime(task.scheduledTime)}
-                  </span>
-                  <span className="timeline-point">
-                    {task.completed && <Check size={10} />}
-                  </span>
-                  <button
-                    className="timeline-copy task-open-button"
-                    onClick={() => openTask(task.id)}
-                    aria-label={`View task: ${task.title}`}
-                  >
-                    <span className={`timeline-category ${task.category}`}>
-                      {task.category}
-                      {task.id === current?.id && (
-                        <span className="now-label">NEXT TO FOCUS</span>
-                      )}
-                    </span>
-                    <span className="timeline-title">{task.title}</span>
-                    <span className="timeline-duration">
-                      {task.estimatedMinutes} min
-                    </span>
-                  </button>
-                  <CompletionButton task={task} />
-                </div>
-              ))}
-            </div>
-          </Panel>
+          <TodayTimeline />
         </div>
       </div>
     </>

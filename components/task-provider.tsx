@@ -72,12 +72,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const tick = () => setNow(new Date());
     tick();
     const timer = setInterval(tick, 30000);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
     const unsubscribe = store.subscribe(() => {
       void reload();
     });
     return () => {
       active = false;
       clearInterval(timer);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
       unsubscribe();
     };
   }, [store, reload]);

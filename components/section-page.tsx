@@ -1,6 +1,7 @@
 "use client";
 import { Plus, Layers } from "lucide-react";
 import { useDay } from "./task-provider";
+import { SchedulePage } from "./schedule-page";
 import { TaskManager } from "./task-manager";
 import { Panel, TaskRow } from "./task-components";
 const categoryMap: Record<string, string> = {
@@ -17,6 +18,7 @@ export function SectionPage({ section }: { section: string }) {
     section === "Tasks"
       ? tasks
       : tasks.filter((t) => t.category === categoryMap[section]);
+  if (section === "Schedule") return <SchedulePage />;
   return (
     <>
       <div className="day-heading">

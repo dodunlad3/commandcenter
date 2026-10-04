@@ -8,7 +8,7 @@
     "start": "next start --hostname 0.0.0.0",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsc lib/tasks.ts lib/task-store.ts --module commonjs --target es2022 --esModuleInterop --skipLibCheck --strict --outDir .task-tests && node --test tests/*.test.mjs"
+    "test": "tsc lib/tasks.ts lib/task-store.ts lib/schedule.ts lib/schedule-store.ts lib/agenda.ts --module commonjs --target es2022 --esModuleInterop --skipLibCheck --strict --outDir .task-tests && node --test tests/*.test.mjs"
   },
   "dependencies": {
     "next": "^16.0.0",

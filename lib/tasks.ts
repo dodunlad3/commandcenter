@@ -1,3 +1,5 @@
+import { isValidDate, isValidTime } from "./date-time";
+export { localDate, isValidDate, formatDate } from "./date-time";
 export const categories = [
   "work",
   "fitness",
@@ -21,9 +23,6 @@ export type Task = {
   recurring: boolean;
   createdAt: string;
 };
-export function localDate(date = new Date()): string {
-  return `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 export function createMockTasks(date: string): Task[] {
   const rows: [
     string,
@@ -147,6 +146,7 @@ export function createMockTasks(date: string): Task[] {
 export const navigation = [
   "Today",
   "Tasks",
+  "Schedule",
   "Work",
   "Fitness",
   "Content",
@@ -167,11 +167,6 @@ export type TaskInput = Pick<
   | "estimatedMinutes"
 >;
 export const priorities = ["high", "medium", "low"] as const;
-export function isValidDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T12:00:00`);
-  return !Number.isNaN(date.getTime()) && localDate(date) === value;
-}
 export function validateTaskInput(input: TaskInput): string | null {
   if (!input.title.trim() || input.title.trim().length > 160)
     return "Use a title between 1 and 160 characters.";
@@ -181,10 +176,7 @@ export function validateTaskInput(input: TaskInput): string | null {
   if (!priorities.includes(input.priority)) return "Choose a valid priority.";
   if (!isValidDate(input.scheduledDate))
     return "Choose a valid scheduled date.";
-  if (
-    input.scheduledTime !== null &&
-    !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.scheduledTime)
-  )
+  if (input.scheduledTime !== null && !isValidTime(input.scheduledTime))
     return "Choose a valid time.";
   if (
     !Number.isInteger(input.estimatedMinutes) ||
@@ -193,13 +185,6 @@ export function validateTaskInput(input: TaskInput): string | null {
   )
     return "Duration must be a whole number from 1 to 1,440 minutes.";
   return null;
-}
-export function formatDate(value: string): string {
-  return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 export type TaskView = "all" | "today" | "completed" | "upcoming";
 export type TaskSort = "scheduled" | "priority" | "created";

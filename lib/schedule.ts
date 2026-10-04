@@ -1,0 +1,199 @@
+import { categories, type Category } from "./tasks";
+import { isValidDate, isValidTime, timeMinutes, minuteTime } from "./date-time";
+export const weekdays = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+export type Weekday = (typeof weekdays)[number];
+export type ScheduleBlock = {
+  id: string;
+  title: string;
+  description: string;
+  category: Category;
+  startTime: string | null;
+  endTime: string | null;
+  flexible: boolean;
+};
+export type BlockInput = Omit<ScheduleBlock, "id">;
+export type WeeklyRoutine = { weekday: Weekday; blocks: ScheduleBlock[] };
+// Patches, rather than copies of whole days, preserve unrelated template updates.
+export type DateOverride = {
+  date: string;
+  additions: ScheduleBlock[];
+  replacements: ScheduleBlock[];
+  removedIds: string[];
+};
+export type ScheduleData = {
+  routines: WeeklyRoutine[];
+  overrides: DateOverride[];
+};
+export type ScheduleScope =
+  { weekday: Weekday; date?: never } | { date: string; weekday?: never };
+export function weekdayForDate(date: string): Weekday {
+  if (!isValidDate(date)) throw new Error("Choose a valid date.");
+  return weekdays[(new Date(`${date}T12:00:00`).getDay() + 6) % 7];
+}
+export function validateBlock(input: BlockInput): string | null {
+  if (
+    typeof input.title !== "string" ||
+    !input.title.trim() ||
+    input.title.trim().length > 160
+  )
+    return "Use a title between 1 and 160 characters.";
+  if (typeof input.description !== "string" || input.description.length > 4000)
+    return "Keep the description within 4,000 characters.";
+  if (!categories.includes(input.category)) return "Choose a valid category.";
+  if (typeof input.flexible !== "boolean") return "Choose a timing type.";
+  if (input.flexible)
+    return input.startTime === null && input.endTime === null
+      ? null
+      : "Flexible routines must have no required times.";
+  if (!isValidTime(input.startTime) || !isValidTime(input.endTime))
+    return "Choose both start and end times.";
+  if (input.endTime <= input.startTime)
+    return "End time must be after start time on the same day.";
+  return null;
+}
+export function sortBlocks(blocks: ScheduleBlock[]): ScheduleBlock[] {
+  return [...blocks].sort(
+    (a, b) =>
+      Number(a.flexible) - Number(b.flexible) ||
+      (a.startTime ?? "").localeCompare(b.startTime ?? ""),
+  );
+}
+export function scheduleForDate(
+  data: ScheduleData,
+  date: string,
+): ScheduleBlock[] {
+  const base =
+    data.routines.find((r) => r.weekday === weekdayForDate(date))?.blocks ?? [];
+  const override = data.overrides.find((o) => o.date === date);
+  if (!override) return sortBlocks(base);
+  return sortBlocks([
+    ...base
+      .filter((b) => !override.removedIds.includes(b.id))
+      .map((b) => override.replacements.find((r) => r.id === b.id) ?? b),
+    ...override.additions,
+  ]);
+}
+export function flexibleRoutines(blocks: ScheduleBlock[]): ScheduleBlock[] {
+  return blocks.filter((b) => b.flexible);
+}
+export function activeScheduleBlock(
+  blocks: ScheduleBlock[],
+  now: Date,
+): ScheduleBlock | undefined {
+  const minute = now.getHours() * 60 + now.getMinutes();
+  return blocks
+    .filter(
+      (b) =>
+        !b.flexible &&
+        timeMinutes(b.startTime!) <= minute &&
+        minute < timeMinutes(b.endTime!),
+    )
+    .sort((a, b) => b.startTime!.localeCompare(a.startTime!))[0];
+}
+export function nextScheduleBlock(
+  blocks: ScheduleBlock[],
+  now: Date,
+): ScheduleBlock | undefined {
+  const minute = now.getHours() * 60 + now.getMinutes();
+  return sortBlocks(blocks).find(
+    (b) => !b.flexible && timeMinutes(b.startTime!) > minute,
+  );
+}
+export type OpenWindow = {
+  startTime: string;
+  endTime: string;
+  minutes: number;
+};
+export function openWindows(
+  blocks: ScheduleBlock[],
+  extra: { start: number; end: number }[] = [],
+): OpenWindow[] {
+  const ranges = [
+    ...blocks
+      .filter((b) => !b.flexible)
+      .map((b) => ({
+        start: timeMinutes(b.startTime!),
+        end: timeMinutes(b.endTime!),
+      })),
+    ...extra,
+  ].sort((a, b) => a.start - b.start);
+  const gaps: OpenWindow[] = [];
+  let cursor = 0;
+  function add(end: number) {
+    if (end > cursor)
+      gaps.push({
+        startTime: minuteTime(cursor),
+        endTime: minuteTime(end),
+        minutes: end - cursor,
+      });
+  }
+  for (const range of ranges) {
+    const start = Math.max(0, Math.min(1440, range.start)),
+      end = Math.max(0, Math.min(1440, range.end));
+    if (end <= start) continue;
+    add(start);
+    cursor = Math.max(cursor, end);
+  }
+  add(1440);
+  return gaps;
+}
+export function createDefaultSchedule(): ScheduleData {
+  return {
+    routines: weekdays.map((weekday, index) => ({
+      weekday,
+      blocks:
+        index < 5
+          ? [
+              {
+                id: `${weekday}-commute-out`,
+                title: "Commute to Work",
+                description: "",
+                category: "work",
+                startTime: "06:00",
+                endTime: "07:00",
+                flexible: false,
+              },
+              {
+                id: `${weekday}-work`,
+                title: "Work",
+                description: "",
+                category: "work",
+                startTime: "07:00",
+                endTime: "15:30",
+                flexible: false,
+              },
+              {
+                id: `${weekday}-commute-home`,
+                title: "Commute Home",
+                description: "",
+                category: "work",
+                startTime: "15:30",
+                endTime: "16:30",
+                flexible: false,
+              },
+              {
+                id: `${weekday}-fitness`,
+                title:
+                  index % 2 === 0
+                    ? "Full-body workout"
+                    : "Run — minimum 1.5 miles",
+                description: "Choose a time that fits your day.",
+                category: "fitness",
+                startTime: null,
+                endTime: null,
+                flexible: true,
+              },
+            ]
+          : [],
+    })),
+    overrides: [],
+  };
+}

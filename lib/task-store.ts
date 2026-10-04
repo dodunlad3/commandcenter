@@ -1,3 +1,4 @@
+import { newId } from "./ids";
 import {
   createMockTasks,
   validateTaskInput,
@@ -32,13 +33,6 @@ function isTask(value: unknown): value is Task {
     typeof task.createdAt === "string" &&
     !Number.isNaN(Date.parse(task.createdAt))
   );
-}
-function newId(): string {
-  // randomUUID requires a secure context; LAN previews on tablets may use HTTP.
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  return Array.from(crypto.getRandomValues(new Uint32Array(4)), (n) =>
-    n.toString(16).padStart(8, "0"),
-  ).join("-");
 }
 export function createLocalTaskStore(
   getStorage: () => StorageAccess = () => window.localStorage,
