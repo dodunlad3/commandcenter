@@ -1264,3 +1264,238 @@ form > .primary-button {
     visibility: visible;
   }
 }
+
+/* Build 2 task controls extend the existing card and modal system. */
+button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+.task-open-button,
+.task-title-button {
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  border-radius: 6px;
+}
+.task-title-button {
+  min-height: 44px;
+}
+.task-title-button:hover,
+.task-open-button:hover .task-title,
+.task-open-button:hover .timeline-title {
+  color: var(--accent);
+}
+.task-row-copy {
+  flex: 1;
+  min-height: 44px;
+}
+.task-title {
+  display: block;
+}
+.task-open-button .task-meta {
+  display: flex;
+}
+.timeline-copy {
+  min-height: 58px;
+}
+.timeline-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.completed .timeline-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.timeline-item > .check-button {
+  width: 44px;
+}
+.task-views {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.task-views button {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 44px;
+  padding: 10px 15px;
+  font-size: 14px;
+}
+.task-views .selected {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+.task-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.task-filters label {
+  font-size: 13px;
+  color: var(--muted);
+}
+.task-filters select {
+  font-size: 14px;
+  padding: 11px 8px;
+}
+.manager-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.manager-footer button {
+  background: transparent;
+  flex-shrink: 0;
+}
+.task-detail-title h3 {
+  font-size: 23px;
+  line-height: 1.4;
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+}
+.task-detail-title p {
+  color: var(--muted);
+  font-size: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.task-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 22px 0;
+  border-block: 1px solid var(--border);
+  margin: 24px 0;
+}
+.task-details-grid dt {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.task-details-grid dd {
+  font-size: 15px;
+  margin: 0;
+  text-transform: capitalize;
+  overflow-wrap: anywhere;
+}
+.detail-wide {
+  grid-column: 1 / -1;
+}
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.delete-button {
+  margin-left: auto;
+  color: #ed9e9e;
+}
+.danger-button {
+  min-height: 46px;
+  border-radius: 8px;
+  background: #a32c38;
+  color: #fff;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.delete-confirmation p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 8px 0 20px;
+  overflow-wrap: anywhere;
+}
+.form-error {
+  padding: 12px;
+  border: 1px solid #a32c38;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+.storage-error {
+  padding: 16px;
+  border: 1px solid #a32c38;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.storage-error button {
+  flex-shrink: 0;
+}
+.capture-dialog::backdrop {
+  background: #0009;
+  backdrop-filter: blur(5px);
+}
+@media (max-width: 1000px) {
+  .task-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .task-views {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .task-views button {
+    padding: 10px 8px;
+  }
+  .storage-error {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .task-details-grid {
+    gap: 16px;
+  }
+  .dialog-actions .primary-button,
+  .dialog-actions .outline-button {
+    flex: 1;
+  }
+  .manager-footer {
+    align-items: flex-start;
+  }
+}
+@media (max-width: 360px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .task-filters {
+    grid-template-columns: 1fr;
+  }
+  .task-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Native dialogs live in the top layer, so center them relative to the viewport. */
+.capture-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  width: min(520px, calc(100% - 48px));
+}
+@media (max-width: 640px) {
+  .capture-dialog {
+    width: calc(100% - 32px);
+  }
+}

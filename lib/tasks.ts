@@ -22,7 +22,7 @@ export type Task = {
   createdAt: string;
 };
 export function localDate(date = new Date()): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 export function createMockTasks(date: string): Task[] {
   const rows: [
@@ -155,3 +155,95 @@ export const navigation = [
   "Home",
   "Journal",
 ] as const;
+
+export type TaskInput = Pick<
+  Task,
+  | "title"
+  | "description"
+  | "category"
+  | "priority"
+  | "scheduledDate"
+  | "scheduledTime"
+  | "estimatedMinutes"
+>;
+export const priorities = ["high", "medium", "low"] as const;
+export function isValidDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00`);
+  return !Number.isNaN(date.getTime()) && localDate(date) === value;
+}
+export function validateTaskInput(input: TaskInput): string | null {
+  if (!input.title.trim() || input.title.trim().length > 160)
+    return "Use a title between 1 and 160 characters.";
+  if (input.description.length > 4000)
+    return "Keep the description within 4,000 characters.";
+  if (!categories.includes(input.category)) return "Choose a valid category.";
+  if (!priorities.includes(input.priority)) return "Choose a valid priority.";
+  if (!isValidDate(input.scheduledDate))
+    return "Choose a valid scheduled date.";
+  if (
+    input.scheduledTime !== null &&
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.scheduledTime)
+  )
+    return "Choose a valid time.";
+  if (
+    !Number.isInteger(input.estimatedMinutes) ||
+    input.estimatedMinutes < 1 ||
+    input.estimatedMinutes > 1440
+  )
+    return "Duration must be a whole number from 1 to 1,440 minutes.";
+  return null;
+}
+export function formatDate(value: string): string {
+  return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+export type TaskView = "all" | "today" | "completed" | "upcoming";
+export type TaskSort = "scheduled" | "priority" | "created";
+export type TaskFilters = {
+  view: TaskView;
+  category: Category | "all";
+  priority: Task["priority"] | "all";
+  status: "all" | "open" | "completed";
+  sort: TaskSort;
+};
+export function compareScheduled(a: Task, b: Task): number {
+  return (
+    a.scheduledDate.localeCompare(b.scheduledDate) ||
+    (a.scheduledTime || "99:99").localeCompare(b.scheduledTime || "99:99") ||
+    a.createdAt.localeCompare(b.createdAt) ||
+    a.id.localeCompare(b.id)
+  );
+}
+export function selectTasks(
+  tasks: Task[],
+  today: string,
+  filters: TaskFilters,
+): Task[] {
+  return tasks
+    .filter(
+      (task) =>
+        (filters.view === "all" ||
+          (filters.view === "today" && task.scheduledDate === today) ||
+          (filters.view === "completed" && task.completed) ||
+          (filters.view === "upcoming" &&
+            task.scheduledDate > today &&
+            !task.completed)) &&
+        (filters.category === "all" || task.category === filters.category) &&
+        (filters.priority === "all" || task.priority === filters.priority) &&
+        (filters.status === "all" ||
+          task.completed === (filters.status === "completed")),
+    )
+    .sort((a, b) =>
+      filters.sort === "priority"
+        ? priorities.indexOf(a.priority) - priorities.indexOf(b.priority) ||
+          compareScheduled(a, b)
+        : filters.sort === "created"
+          ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() ||
+            a.id.localeCompare(b.id)
+          : compareScheduled(a, b),
+    );
+}

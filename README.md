@@ -1,6 +1,6 @@
 # Daywell — Personal command center
 
-Version 1 is a tablet-first Today dashboard built with Next.js App Router, TypeScript, Tailwind CSS 4, and Lucide icons. No authentication, database, AI, or external integrations are included.
+Build 2 adds persistent task management to the existing tablet-first Today dashboard. The Next.js App Router, TypeScript, Tailwind CSS 4, Lucide icons, navigation, dark/light themes, and card design are preserved. No authentication, Supabase, AI, integrations, notifications, service workers, or automatic recurring-task generation are included.
 
 ## Run locally
 
@@ -11,46 +11,73 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. To use your Android tablet on the same Wi-Fi, open `http://<your-computer-LAN-IP>:3000`. Your firewall must allow that connection. The development server listens on all interfaces; use a trusted network.
+Open http://localhost:3000 or http://127.0.0.1:3000. If port 3000 is occupied, Next.js prints the alternate development port. For the production server, select an available port explicitly:
 
 ```sh
-npm run lint
-npm run typecheck
 npm run build
-npm start
+npm start -- --port 3002
 ```
 
-## Architecture
+To use the Lenovo Android tablet on the same Wi-Fi, open `http://<computer-LAN-IP>:3000`. Allow that port through the firewall on a trusted network. For development, add your computer's exact LAN IP/hostname to `allowedDevOrigins` in `next.config.ts` and restart the server. The production server does not require this development setting.
 
-- `app/`: App Router pages, root layout, metadata, global responsive styles, and web app manifest.
-- `app/[section]/`: validated routes for Tasks, Work, Fitness, Content, Projects, Money, Home, and Journal.
-- `components/app-shell.tsx`: responsive navigation, theme controls, shared mock state, and Quick Capture.
-- `components/today-dashboard.tsx`: greeting, progress, current focus, next task, priorities, energy, and timeline.
-- `components/task-components.tsx`: reusable panels, category tags, task rows, and completion controls.
-- `components/section-page.tsx`: lightweight navigation destinations, including filtered task lists.
-- `lib/tasks.ts`: typed task contract, category definitions, navigation, and realistic mock-data factory.
-- `public/`: application icon.
+```sh
+npm run test
+npm run typecheck
+npm run lint
+npm run build
+```
 
-The desktop and tablet sidebar gives way to bottom navigation and a full menu on phones. Landscape tablets use two dashboard columns; narrower tablets stack the main cards. CSS variables provide dark and light themes. Touch controls generally have 44px targets, keyboard focus indicators, and accessible names.
+## Build 2 behavior
 
-## V1 behavior
+- Quick Capture creates tasks with title, description, category, priority, scheduled date, optional time, and estimated minutes.
+- Tap a task's title or row to open details from Today, Tasks, or any category page. Details include all task fields, recurring status, completion status, and creation timestamp.
+- Edit uses the same form and modal styling as Quick Capture. Edits retain the task's ID, creation timestamp, completion, and recurring flag.
+- Delete asks for confirmation, with **Keep task** focused first. Deleted tasks stay deleted after refresh.
+- Complete/reopen changes persist and immediately update all views.
+- Tasks offers All tasks, Today, Completed, and Upcoming views, plus category, priority, and completion filters. Filters combine with the selected view; Reset filters returns to All tasks. Upcoming means unfinished tasks scheduled strictly after today. All tasks includes past tasks.
+- Scheduled sorting orders date, then time ascending; tasks without times follow timed tasks on the same date. Priority sorting uses high, medium, low; creation-date sorting shows newest first. Deterministic tie breakers keep the lists stable.
+- Today uses the browser's local calendar date. Only tasks scheduled for that date count toward progress, priorities, Right Now, Up Next, and the timeline. Right Now is the earliest unfinished task in today's queue; Up Next follows it. Midnight updates the visible day without replacing saved tasks. The clock refreshes every 30 seconds.
+- Top 3 priorities shows up to three high-priority tasks scheduled for today. Recurring is informational; no future occurrences are generated.
+- Category pages show all saved tasks in that category, with dates and times. Journal remains a future-build placeholder.
+- Energy, theme, and task filters remain session-only preferences.
 
-Tasks are generated using the browser's local date. The greeting refreshes every 30 seconds. Task completion updates progress, priorities, and focus immediately. Right Now is the earliest unfinished scheduled task; Up Next is the following task. These are an actionable queue, not a live calendar or time-tracking system. Unscheduled captures appear after scheduled tasks. Top priorities are the three seeded high-priority tasks.
+Validation requires a trimmed title of 1–160 characters, description of at most 4,000 characters, a known category/priority, a real calendar date, an optional valid 24-hour time, and whole-number duration of 1–1,440 minutes. Native form constraints and shared data-layer validation both apply.
 
-Quick Capture adds a task for today with title, optional description, category, priority, optional time, and estimated duration. Task and energy state remain available across client-side navigation. All state is in memory and resets on a page refresh. Tasks are reseeded when the local date changes. Theme is also session-only. Energy selection displays a pace reminder; it does not automatically reschedule tasks. Journal is an explicit future-version placeholder.
+## Persistence architecture
 
-The task model contains `id`, `title`, `description`, `category`, `priority`, `completed`, `scheduledDate`, `scheduledTime`, `estimatedMinutes`, `recurring`, and `createdAt`. A recurring flag is displayed but does not generate future occurrences.
+`lib/task-store.ts` is the only module that accesses localStorage. Its `TaskStore` interface exposes asynchronous `load`, `create`, `update`, `remove`, `toggle`, and `subscribe` methods. The current browser adapter reads the latest durable collection before each mutation, validates the data, and writes before reporting success. The provider updates its task list only after the write succeeds; a failed write never presents an unsaved change as saved. An injected storage getter enables deterministic tests without a browser.
 
-## PWA and future development
+The storage key is `daywell.tasks.v1`, containing `{ version: 1, tasks: Task[] }`. On first load **only when the key is absent**, the existing mock factory seeds eight sample tasks using the local date. Existing data, including an empty array after deleting every task, is preserved across refreshes, browser restarts, and date changes. Invalid JSON, duplicate IDs, malformed records, and unsupported schema versions are reported without overwriting the stored value. Storage-access or quota errors show an error and a Reload tasks button. Failed forms stay open with their values intact. No automatic data reset/recovery is attempted.
 
-The manifest, standalone display mode, theme metadata, and scalable icon lay the groundwork for a PWA. This version does **not** include a service worker, offline caching, push notifications, or guaranteed browser installability. Production PWA features require HTTPS, a suitable caching strategy, and device testing; Raster 192px/512px and Apple touch icons are included for broader device support.
+`components/task-provider.tsx` loads storage after mounting, making the server output and first browser render consistent. It owns shared task state, the live clock, and modal selection. The root layout retains the provider across client-side navigation. Other browser tabs on the same origin refresh via storage events. This is simple local persistence, not a transactional multi-tab database; truly simultaneous writes from separate tabs can still use last-write-wins behavior.
 
-For Supabase later, move task loading and mutations behind a data-access layer, add authentication and row-level security, and replace the mock factory without changing the task presentation components. No secrets or integration scaffolding are required for this version.
+Storage is specific to the **browser profile, device, and origin (protocol + hostname + port)**. `localhost`, `127.0.0.1`, LAN addresses, different ports, and a future deployed URL each have separate collections. Closing/reopening a normal browser preserves tasks, but clearing site data or ending a private-browsing session can erase them. Local storage is not a backup or cross-device sync. Use one consistent URL for your daily workflow. Build 1's in-memory changes cannot be migrated after its page is gone because they were never saved.
 
-For future Vercel deployment, import this application directory as the project root, use the Next.js preset, and retain the default `npm run build` command. No environment variables are required. Deployment is intentionally deferred.
+To introduce Supabase later, implement `TaskStore` with authenticated database operations and subscriptions, then swap the provider's adapter. The task forms, details, dashboard, and task manager continue to use the same context/actions. Schema migrations should be explicit and preserve existing local data.
+
+## Folder structure
+
+- `app/`: App Router routes, layout, metadata, manifest, and responsive theme styles.
+- `components/app-shell.tsx`: preserved sidebar, phone navigation, theme toggle, storage error banner, and shared modal host.
+- `components/task-provider.tsx`: shared task/clock context and storage actions.
+- `components/task-dialogs.tsx`: accessible native dialog, reusable capture/edit form, task details, and deletion confirmation.
+- `components/task-manager.tsx`: task views, filters, and sorting controls.
+- `components/task-components.tsx`: panels, category tags, clickable task rows, completion controls.
+- `components/today-dashboard.tsx`: preserved dashboard, now driven by persisted tasks scheduled for today.
+- `components/section-page.tsx`: category destinations and task-manager routing.
+- `lib/tasks.ts`: centralized Task/TaskInput types, mock factory, validation, local-date formatting, and filter/sort utilities.
+- `lib/task-store.ts`: versioned browser-storage adapter and replaceable persistence interface.
+- `tests/task-store.test.mjs`: Node's built-in test runner covers persistence, mutations, validation, filtering, and failure cases. `npm run test` compiles only the library files into ignored `.task-tests/` before running the tests.
+- `public/`: SVG, 192px/512px PNG, and Apple touch icons.
+
+The existing portrait/landscape tablet and phone breakpoints are retained. Task controls use large touch targets, labeled native selects, keyboard focus states, native modal focus containment, Escape dismissal, and focus restoration on close. Editing and capture autofocus the title; deletion confirmation autofocuses the safe choice.
 
 ## Verification
 
-Lint, TypeScript checking, and the production build pass. Browser checks cover task completion, progress and focus updates, Quick Capture, energy selection, light mode, and Tasks navigation. Layouts were inspected at 390px phone, 800px portrait tablet, and 1024px landscape tablet widths without horizontal overflow. These are browser checks, not physical Lenovo/iPhone device tests.
+Run the commands above before committing. The storage suite checks first-run-only initialization, empty collections, create/edit/delete/complete/reopen persistence, rejected input, corrupt/unsupported records, failed writes, independent adapters, SSR-safe construction, date filtering, and sorting. Browser verification covers capture, refresh persistence, task details, edit/reschedule, completion/reopen, deletion confirmation/cancellation, deletion persistence, combined filters, sorting, and phone/tablet layouts. These are browser checks, not physical Lenovo or iPhone tests.
 
-The production dependency audit reports zero vulnerabilities. The development-only Next.js ESLint dependency chain currently reports a braces advisory (GHSA-vfj7-8cjw-p6xm); the current published braces version has no patched release. This does not affect the deployed runtime. Recheck when updating lint tooling.
+## PWA and future deployment
+
+The existing manifest, standalone display mode, theme metadata, and icons provide PWA groundwork. Offline caching, service workers, push notifications, and guaranteed installability remain deferred. Local task persistence does not make the application's code available offline.
+
+For Vercel later, import this application directory as the project root and use the Next.js preset with `npm run build`. No environment variables are required in Build 2. Deployment is deferred.

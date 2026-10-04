@@ -1,7 +1,9 @@
 "use client";
+import { useState } from "react";
+import { formatDate } from "@/lib/tasks";
 import { Check, Clock3, RotateCw } from "lucide-react";
 import type { Task } from "@/lib/tasks";
-import { useDay } from "./app-shell";
+import { useDay } from "./task-provider";
 export function CategoryTag({ category }: { category: Task["category"] }) {
   return (
     <span className={`category-tag ${category}`}>
@@ -11,11 +13,17 @@ export function CategoryTag({ category }: { category: Task["category"] }) {
   );
 }
 export function CompletionButton({ task }: { task: Task }) {
-  const { toggle } = useDay();
+  const { toggle, ready } = useDay();
+  const [busy, setBusy] = useState(false);
   return (
     <button
       className={`check-button ${task.completed ? "checked" : ""}`}
-      onClick={() => toggle(task.id)}
+      disabled={!ready || busy}
+      onClick={async () => {
+        setBusy(true);
+        await toggle(task.id);
+        setBusy(false);
+      }}
       aria-label={`${task.completed ? "Reopen" : "Complete"} ${task.title}`}
       aria-pressed={task.completed}
     >
@@ -23,21 +31,44 @@ export function CompletionButton({ task }: { task: Task }) {
     </button>
   );
 }
-export function TaskRow({ task, index }: { task: Task; index?: number }) {
+export function TaskRow({
+  task,
+  index,
+  showSchedule = false,
+}: {
+  task: Task;
+  index?: number;
+  showSchedule?: boolean;
+}) {
+  const { openTask } = useDay();
   return (
     <div className={`task-row ${task.completed ? "completed" : ""}`}>
       <CompletionButton task={task} />
-      <div className="task-row-copy">
-        <div className="task-title">{task.title}</div>
-        <div className="task-meta">
+      <button
+        type="button"
+        className="task-row-copy task-open-button"
+        onClick={() => openTask(task.id)}
+        aria-label={`View task: ${task.title}`}
+      >
+        <span className="task-title">{task.title}</span>
+        <span className="task-meta">
           <CategoryTag category={task.category} />
           <span>
             <Clock3 size={13} />
             {task.estimatedMinutes} min
           </span>
           {task.recurring && <RotateCw size={13} aria-label="Recurring task" />}
-        </div>
-      </div>
+          {showSchedule && (
+            <>
+              <span>{task.priority} priority</span>
+              <span>
+                {formatDate(task.scheduledDate)} ·{" "}
+                {formatTime(task.scheduledTime)}
+              </span>
+            </>
+          )}
+        </span>
+      </button>
       {index !== undefined && (
         <span className="priority-number">0{index + 1}</span>
       )}

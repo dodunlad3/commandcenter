@@ -9,7 +9,8 @@ import {
   Sunrise,
 } from "lucide-react";
 import Link from "next/link";
-import { useDay } from "./app-shell";
+import { localDate, compareScheduled } from "@/lib/tasks";
+import { useDay } from "./task-provider";
 import {
   CategoryTag,
   CompletionButton,
@@ -18,13 +19,28 @@ import {
   TaskRow,
 } from "./task-components";
 export function TodayDashboard() {
-  const { tasks, now, energy, setEnergy, capture, toggle } = useDay();
-  if (!now)
+  const {
+    tasks: allTasks,
+    ready,
+    storageError,
+    now,
+    energy,
+    setEnergy,
+    capture,
+    toggle,
+    openTask,
+  } = useDay();
+  if (!now || !ready)
     return (
       <div className="loading" role="status">
-        Getting your day ready…
+        {storageError
+          ? "Your tasks are unavailable until storage is restored."
+          : "Getting your day ready…"}
       </div>
     );
+  const tasks = allTasks.filter(
+    (task) => task.scheduledDate === localDate(now),
+  );
   const done = tasks.filter((t) => t.completed).length;
   const progress = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
   const remaining = tasks
@@ -71,7 +87,15 @@ export function TodayDashboard() {
             {current ? (
               <>
                 <CategoryTag category={current.category} />
-                <h2>{current.title}</h2>
+                <h2>
+                  <button
+                    className="task-title-button"
+                    onClick={() => openTask(current.id)}
+                    aria-label={`View task: ${current.title}`}
+                  >
+                    {current.title}
+                  </button>
+                </h2>
                 <p>
                   {current.description ||
                     "Make a little room and take the next step."}
@@ -94,7 +118,11 @@ export function TodayDashboard() {
             ) : (
               <>
                 <h2>A little breathing room.</h2>
-                <p>You’ve completed everything for today. Enjoy the space.</p>
+                <p>
+                  {tasks.length
+                    ? "You’ve completed everything for today. Enjoy the space."
+                    : "Nothing scheduled for today. Capture a task when you’re ready."}
+                </p>
                 <button className="primary-button" onClick={capture}>
                   <Plus size={18} />
                   Capture something new
@@ -113,7 +141,15 @@ export function TodayDashboard() {
                   <Clock3 size={24} />
                 </span>
                 <div>
-                  <h3>{next.title}</h3>
+                  <h3>
+                    <button
+                      className="task-title-button"
+                      onClick={() => openTask(next.id)}
+                      aria-label={`View task: ${next.title}`}
+                    >
+                      {next.title}
+                    </button>
+                  </h3>
                   <div className="task-meta">
                     <CategoryTag category={next.category} />
                     <span>{formatTime(next.scheduledTime)}</span>
@@ -140,6 +176,11 @@ export function TodayDashboard() {
             {priorities.map((task, i) => (
               <TaskRow key={task.id} task={task} index={i} />
             ))}
+            {!priorities.length && (
+              <p className="muted">
+                No high-priority tasks scheduled for today.
+              </p>
+            )}
             <div className="panel-footnote">
               A good day starts with what matters most.
             </div>
@@ -237,38 +278,39 @@ export function TodayDashboard() {
             className="timeline-panel"
           >
             <div className="timeline">
-              {[...tasks]
-                .sort((a, b) =>
-                  (a.scheduledTime || "99:99").localeCompare(
-                    b.scheduledTime || "99:99",
-                  ),
-                )
-                .map((task) => (
-                  <div
-                    key={task.id}
-                    className={`timeline-item ${task.completed ? "completed" : ""} ${task.id === current?.id ? "current" : ""}`}
+              {!tasks.length && (
+                <p className="muted">Your timeline is clear today.</p>
+              )}
+              {[...tasks].sort(compareScheduled).map((task) => (
+                <div
+                  key={task.id}
+                  className={`timeline-item ${task.completed ? "completed" : ""} ${task.id === current?.id ? "current" : ""}`}
+                >
+                  <span className="timeline-time">
+                    {formatTime(task.scheduledTime)}
+                  </span>
+                  <span className="timeline-point">
+                    {task.completed && <Check size={10} />}
+                  </span>
+                  <button
+                    className="timeline-copy task-open-button"
+                    onClick={() => openTask(task.id)}
+                    aria-label={`View task: ${task.title}`}
                   >
-                    <span className="timeline-time">
-                      {formatTime(task.scheduledTime)}
+                    <span className={`timeline-category ${task.category}`}>
+                      {task.category}
+                      {task.id === current?.id && (
+                        <span className="now-label">NEXT TO FOCUS</span>
+                      )}
                     </span>
-                    <span className="timeline-point">
-                      {task.completed && <Check size={10} />}
+                    <span className="timeline-title">{task.title}</span>
+                    <span className="timeline-duration">
+                      {task.estimatedMinutes} min
                     </span>
-                    <div className="timeline-copy">
-                      <span className={`timeline-category ${task.category}`}>
-                        {task.category}
-                        {task.id === current?.id && (
-                          <span className="now-label">NEXT TO FOCUS</span>
-                        )}
-                      </span>
-                      <h3>{task.title}</h3>
-                      <span className="timeline-duration">
-                        {task.estimatedMinutes} min
-                      </span>
-                    </div>
-                    <CompletionButton task={task} />
-                  </div>
-                ))}
+                  </button>
+                  <CompletionButton task={task} />
+                </div>
+              ))}
             </div>
           </Panel>
         </div>
