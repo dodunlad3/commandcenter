@@ -154,6 +154,7 @@ export const navigation = [
   "Money",
   "Home",
   "Journal",
+  "Settings",
 ] as const;
 
 export type TaskInput = Pick<

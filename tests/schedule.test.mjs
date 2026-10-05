@@ -264,7 +264,7 @@ test("malformed/versioned/duplicate/invalid schedule storage is preserved on rea
   for (const raw of [
     "broken",
     "null",
-    JSON.stringify({ version: 2, schedule: base }),
+    JSON.stringify({ version: 3, schedule: base }),
     JSON.stringify({ version: 1, schedule: {} }),
     ...[duplicate, invalid, badOverride].map((schedule) =>
       JSON.stringify({ version: 1, schedule }),

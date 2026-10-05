@@ -11,7 +11,7 @@ import {
   energyRecommendations,
   overdueTasks,
 } from "@/lib/agenda";
-import { scheduleForDate } from "@/lib/schedule";
+import { matchingRecurring, scheduleForDate } from "@/lib/schedule";
 import { useDay } from "./task-provider";
 import { useSchedule } from "./schedule-provider";
 import {
@@ -251,6 +251,15 @@ export function TodayTimeline() {
       }
       className="timeline-panel"
     >
+      {ready && matchingRecurring(data, date) && (
+        <p className="schedule-source">
+          <strong>{matchingRecurring(data, date)!.name}</strong>
+          <span>Every other {matchingRecurring(data, date)!.weekday}</span>
+          {data.overrides.some((o) => o.date === date) && (
+            <span className="source-badge">Date-specific changes</span>
+          )}
+        </p>
+      )}
       <div className="timeline">
         {!rows.length && <p className="muted">Your timeline is clear today.</p>}
         {rows.map((row, index) =>

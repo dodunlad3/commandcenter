@@ -11,6 +11,7 @@ import {
   type ScheduleData,
   type ScheduleScope,
   type BlockInput,
+  type RecurringInput,
 } from "@/lib/schedule";
 export type ScheduleDialog = { scope: ScheduleScope; id?: string } | null;
 type ScheduleState = {
@@ -28,6 +29,10 @@ type ScheduleState = {
   ) => Promise<boolean>;
   deleteBlock: (scope: ScheduleScope, id: string) => Promise<boolean>;
   resetDate: (date: string) => Promise<boolean>;
+  createRecurring: (input: RecurringInput) => Promise<boolean>;
+  updateRecurring: (id: string, input: RecurringInput) => Promise<boolean>;
+  deleteRecurring: (id: string) => Promise<boolean>;
+  resetRecurringBlock: (id: string, blockId: string) => Promise<boolean>;
   reload: () => Promise<void>;
 };
 const ScheduleContext = createContext<ScheduleState | null>(null);
@@ -46,6 +51,7 @@ export function ScheduleProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<ScheduleData>({
     routines: [],
     overrides: [],
+    recurringOverrides: [],
   });
   const [ready, setReady] = useState(false),
     [storageError, setStorageError] = useState(""),
@@ -103,6 +109,12 @@ export function ScheduleProvider({ children }: { children: React.ReactNode }) {
         updateBlock: (scope, id, input) =>
           change(() => store.update(scope, id, input)),
         deleteBlock: (scope, id) => change(() => store.remove(scope, id)),
+        createRecurring: (input) => change(() => store.createRecurring(input)),
+        updateRecurring: (id, input) =>
+          change(() => store.updateRecurring(id, input)),
+        deleteRecurring: (id) => change(() => store.removeRecurring(id)),
+        resetRecurringBlock: (id, blockId) =>
+          change(() => store.resetRecurringBlock(id, blockId)),
         resetDate: (date) => change(() => store.resetDate(date)),
       }}
     >

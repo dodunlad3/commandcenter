@@ -1,6 +1,7 @@
 "use client";
 import { Plus, Layers } from "lucide-react";
 import { useDay } from "./task-provider";
+import { SettingsPage } from "./settings-page";
 import { SchedulePage } from "./schedule-page";
 import { TaskManager } from "./task-manager";
 import { Panel, TaskRow } from "./task-components";
@@ -18,6 +19,7 @@ export function SectionPage({ section }: { section: string }) {
     section === "Tasks"
       ? tasks
       : tasks.filter((t) => t.category === categoryMap[section]);
+  if (section === "Settings") return <SettingsPage />;
   if (section === "Schedule") return <SchedulePage />;
   return (
     <>

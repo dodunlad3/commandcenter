@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useDay } from "./task-provider";
+import { useSettings } from "./settings-provider";
 import { useSchedule } from "./schedule-provider";
 import { ScheduleDialogs } from "./schedule-dialogs";
 import { TaskDialogs } from "./task-dialogs";
@@ -17,6 +18,7 @@ import {
   Wallet,
   House,
   BookOpen,
+  Settings,
   Plus,
   Moon,
   Sun,
@@ -35,15 +37,17 @@ const icons = [
   Wallet,
   House,
   BookOpen,
+  Settings,
 ];
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { capture, ready, storageError, reload } = useDay();
   const schedule = useSchedule();
-  const [light, setLight] = useState(false);
+  const appearance = useSettings();
+  const light = appearance.settings.theme === "light";
   const [menu, setMenu] = useState(false);
   return (
-    <div className={`app ${light ? "light" : ""}`}>
+    <div className="app">
       <aside className={`sidebar ${menu ? "open" : ""}`}>
         <Link href="/" className="brand">
           <span className="brand-mark">d.</span>daywell
@@ -60,7 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={href}
                 aria-current={path === href ? "page" : undefined}
                 onClick={() => setMenu(false)}
-                className={`nav-link ${path === href ? "active" : ""}`}
+                className={`nav-link ${label === "Settings" ? "settings-nav" : ""} ${path === href ? "active" : ""}`}
               >
                 <Icon size={20} />
                 {label}
@@ -80,7 +84,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             className="profile"
-            onClick={() => setLight(!light)}
+            disabled={!appearance.ready || appearance.busy}
+            onClick={() =>
+              void appearance.updateSettings({
+                theme: light ? "dark" : "light",
+              })
+            }
             aria-label={`Switch to ${light ? "dark" : "light"} mode`}
           >
             <span className="avatar">YO</span>
@@ -150,11 +159,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           )}
+          {appearance.storageError && (
+            <div className="storage-error" role="alert">
+              <p>{appearance.storageError}</p>
+              <button
+                className="outline-button"
+                onClick={() => void appearance.reload()}
+              >
+                Reload appearance
+              </button>
+            </div>
+          )}
           {children}
         </main>
         <footer className="page-footer">
           <span>Make room for what matters.</span>
-          <span>DAYWELL / V.03</span>
+          <span>DAYWELL / V.03.5</span>
         </footer>
       </div>
       <nav className="bottom-nav" aria-label="Mobile navigation">

@@ -1,5 +1,11 @@
 import { categories, type Category } from "./tasks";
-import { isValidDate, isValidTime, timeMinutes, minuteTime } from "./date-time";
+import {
+  isValidDate,
+  isValidTime,
+  timeMinutes,
+  minuteTime,
+  calendarDayNumber,
+} from "./date-time";
 export const weekdays = [
   "monday",
   "tuesday",
@@ -28,12 +34,26 @@ export type DateOverride = {
   replacements: ScheduleBlock[];
   removedIds: string[];
 };
+export type RecurringScheduleOverride = Omit<DateOverride, "date"> & {
+  id: string;
+  name: string;
+  weekday: Weekday;
+  intervalWeeks: 2;
+  anchorDate: string;
+};
+export type RecurringInput = Pick<
+  RecurringScheduleOverride,
+  "name" | "weekday" | "anchorDate"
+>;
 export type ScheduleData = {
   routines: WeeklyRoutine[];
   overrides: DateOverride[];
+  recurringOverrides: RecurringScheduleOverride[];
 };
 export type ScheduleScope =
-  { weekday: Weekday; date?: never } | { date: string; weekday?: never };
+  | { weekday: Weekday; date?: never; recurringId?: never }
+  | { date: string; weekday?: never; recurringId?: never }
+  | { recurringId: string; date?: never; weekday?: never };
 export function weekdayForDate(date: string): Weekday {
   if (!isValidDate(date)) throw new Error("Choose a valid date.");
   return weekdays[(new Date(`${date}T12:00:00`).getDay() + 6) % 7];
@@ -66,20 +86,79 @@ export function sortBlocks(blocks: ScheduleBlock[]): ScheduleBlock[] {
       (a.startTime ?? "").localeCompare(b.startTime ?? ""),
   );
 }
+export function validateRecurring(input: RecurringInput): string | null {
+  if (
+    typeof input.name !== "string" ||
+    !input.name.trim() ||
+    input.name.trim().length > 100
+  )
+    return "Use a name between 1 and 100 characters.";
+  if (!weekdays.includes(input.weekday)) return "Choose a valid weekday.";
+  if (typeof input.anchorDate !== "string" || !isValidDate(input.anchorDate))
+    return "Choose a valid anchor date.";
+  if (weekdayForDate(input.anchorDate) !== input.weekday)
+    return `Choose a ${input.weekday} as the anchor date.`;
+  return null;
+}
+export function matchesRecurring(
+  rule: RecurringScheduleOverride,
+  date: string,
+): boolean {
+  return (
+    weekdayForDate(date) === rule.weekday &&
+    (calendarDayNumber(date) - calendarDayNumber(rule.anchorDate)) % 14 === 0
+  );
+}
+export function matchingRecurring(
+  data: ScheduleData,
+  date: string,
+): RecurringScheduleOverride | undefined {
+  return data.recurringOverrides.find((rule) => matchesRecurring(rule, date));
+}
+export function applySchedulePatch(
+  blocks: ScheduleBlock[],
+  patch: Pick<DateOverride, "additions" | "replacements" | "removedIds">,
+): ScheduleBlock[] {
+  const replacements = new Map(patch.replacements.map((b) => [b.id, b]));
+  const result = blocks
+    .filter((b) => !patch.removedIds.includes(b.id))
+    .map((b) => replacements.get(b.id) ?? b);
+  // An explicit date replacement can restore a weekly block removed by a repeating exception.
+  for (const replacement of patch.replacements)
+    if (!result.some((b) => b.id === replacement.id)) result.push(replacement);
+  return sortBlocks([...result, ...patch.additions]);
+}
+export function blocksForScope(
+  data: ScheduleData,
+  scope: ScheduleScope,
+): ScheduleBlock[] {
+  if (scope.date) return scheduleForDate(data, scope.date);
+  if (scope.recurringId) {
+    const rule = data.recurringOverrides.find(
+      (r) => r.id === scope.recurringId,
+    );
+    if (!rule) return [];
+    return applySchedulePatch(
+      data.routines.find((r) => r.weekday === rule.weekday)?.blocks ?? [],
+      rule,
+    );
+  }
+  return sortBlocks(
+    data.routines.find((r) => r.weekday === scope.weekday)?.blocks ?? [],
+  );
+}
 export function scheduleForDate(
   data: ScheduleData,
   date: string,
 ): ScheduleBlock[] {
   const base =
     data.routines.find((r) => r.weekday === weekdayForDate(date))?.blocks ?? [];
+  const recurring = matchingRecurring(data, date);
+  const withRecurring = recurring
+    ? applySchedulePatch(base, recurring)
+    : sortBlocks(base);
   const override = data.overrides.find((o) => o.date === date);
-  if (!override) return sortBlocks(base);
-  return sortBlocks([
-    ...base
-      .filter((b) => !override.removedIds.includes(b.id))
-      .map((b) => override.replacements.find((r) => r.id === b.id) ?? b),
-    ...override.additions,
-  ]);
+  return override ? applySchedulePatch(withRecurring, override) : withRecurring;
 }
 export function flexibleRoutines(blocks: ScheduleBlock[]): ScheduleBlock[] {
   return blocks.filter((b) => b.flexible);
@@ -195,5 +274,6 @@ export function createDefaultSchedule(): ScheduleData {
           : [],
     })),
     overrides: [],
+    recurringOverrides: [],
   };
 }

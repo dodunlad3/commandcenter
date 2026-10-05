@@ -4,7 +4,8 @@ import { Check, Trash2 } from "lucide-react";
 import { categories } from "@/lib/tasks";
 import { formatDate } from "@/lib/date-time";
 import {
-  scheduleForDate,
+  blocksForScope,
+  matchingRecurring,
   validateBlock,
   weekdayForDate,
   type ScheduleScope,
@@ -29,11 +30,15 @@ function BlockEditor({
   const original = selection.scope;
   const date = original.date;
   const block = selection.id
-    ? (date
-        ? scheduleForDate(data, date)
-        : data.routines.find((r) => r.weekday === original.weekday)!.blocks
-      ).find((b) => b.id === selection.id)
+    ? blocksForScope(data, original).find((b) => b.id === selection.id)
     : undefined;
+  const recurring = date ? matchingRecurring(data, date) : undefined;
+  const weekly =
+    date && selection.id
+      ? data.routines
+          .find((r) => r.weekday === weekdayForDate(date))
+          ?.blocks.find((b) => b.id === selection.id)
+      : undefined;
   const dateAddition =
     date &&
     data.overrides
@@ -56,11 +61,27 @@ function BlockEditor({
     if (scope) titleRef.current?.focus();
   }, [scope]);
   const editingBlock: ScheduleBlock | undefined =
-    scope?.weekday && selection.id
-      ? data.routines
-          .find((r) => r.weekday === scope.weekday)
-          ?.blocks.find((b) => b.id === selection.id)
+    scope && selection.id
+      ? (blocksForScope(data, scope).find((b) => b.id === selection.id) ??
+        (scope.recurringId
+          ? data.routines
+              .find(
+                (r) =>
+                  r.weekday ===
+                  data.recurringOverrides.find(
+                    (rule) => rule.id === scope.recurringId,
+                  )?.weekday,
+              )
+              ?.blocks.find((b) => b.id === selection.id)
+          : undefined))
       : block;
+  function chooseScope(next: ScheduleScope) {
+    const selected = blocksForScope(data, next).find(
+      (b) => b.id === selection.id,
+    );
+    setFlexible(selected?.flexible ?? weekly?.flexible ?? false);
+    setScope(next);
+  }
   if (selection.id && !block)
     return (
       <p className="muted">
@@ -74,27 +95,38 @@ function BlockEditor({
         <button className="primary-button" onClick={() => setScope(original)}>
           Change {date ? formatDate(date) : "today"} only
         </button>
-        <button
-          className="outline-button"
-          onClick={() => {
-            const weekday = weekdayForDate(date!);
-            const weekly = data.routines
-              .find((r) => r.weekday === weekday)
-              ?.blocks.find((b) => b.id === selection.id);
-            setFlexible(weekly?.flexible ?? false);
-            setScope({ weekday });
-          }}
-        >
-          Change the weekly routine
-        </button>
+        {recurring &&
+          (weekly ||
+            recurring.additions.some((b) => b.id === selection.id)) && (
+            <button
+              className="outline-button"
+              onClick={() => chooseScope({ recurringId: recurring.id })}
+            >
+              Edit every-other-week routine · {recurring.name}
+            </button>
+          )}
+        {weekly && (
+          <button
+            className="outline-button"
+            onClick={() => chooseScope({ weekday: weekdayForDate(date!) })}
+          >
+            Edit weekly routine
+          </button>
+        )}
         <p className="form-note">
           Date-only changes keep the weekly template intact.
         </p>
       </div>
     );
+  const rule = scope.recurringId
+    ? data.recurringOverrides.find((r) => r.id === scope.recurringId)
+    : undefined;
   const scopeLabel = scope.date
-    ? `Only ${formatDate(scope.date)}. Your weekly routine stays unchanged.`
-    : `Weekly routine · every ${scope.weekday}. This change affects every future ${scope.weekday} occurrence.`;
+    ? `Only ${formatDate(scope.date)}. Your repeating routines stay unchanged.`
+    : rule
+      ? `${rule.name} · every other ${rule.weekday}, anchored on ${formatDate(rule.anchorDate)}. Changes affect this alternating cycle.`
+      : `Weekly routine · every ${scope.weekday}. This change affects every future ${scope.weekday} occurrence.`;
+  const scopeKey = scope.date ?? scope.recurringId ?? scope.weekday;
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || !scope) return;
@@ -138,7 +170,12 @@ function BlockEditor({
           <h3 id="delete-block-title">Remove this block?</h3>
           <p>
             “{editingBlock?.title}” will be removed{" "}
-            {scope.date ? "for this date only" : "from the weekly routine"}.
+            {scope.date
+              ? "for this date only"
+              : rule
+                ? `from ${rule.name}`
+                : "from the weekly routine"}
+            .
           </p>
           {storageError && (
             <p className="form-error" role="alert">
@@ -167,7 +204,7 @@ function BlockEditor({
           </div>
         </section>
       ) : (
-        <form key={scope.date ?? scope.weekday} onSubmit={submit}>
+        <form key={scopeKey} onSubmit={submit}>
           <label>
             Block title
             <input
@@ -257,7 +294,12 @@ function BlockEditor({
               disabled={busy}
             >
               <Trash2 size={18} />
-              Remove {scope.date ? "for this date" : "from routine"}
+              Remove{" "}
+              {scope.date
+                ? "for this date"
+                : rule
+                  ? "from alternating routine"
+                  : "from routine"}
             </button>
           )}
         </form>
@@ -270,7 +312,7 @@ export function ScheduleDialogs() {
   if (!dialog) return null;
   return (
     <Modal
-      key={`${dialog.scope.date ?? dialog.scope.weekday}-${dialog.id ?? "new"}`}
+      key={`${dialog.scope.date ?? dialog.scope.recurringId ?? dialog.scope.weekday}-${dialog.id ?? "new"}`}
       title={dialog.id ? "Edit schedule block" : "Add schedule block"}
       eyebrow="MAKE ROOM FOR YOUR DAY"
       onClose={closeDialog}

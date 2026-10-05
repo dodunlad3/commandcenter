@@ -1,6 +1,6 @@
 # Daywell — Personal command center
 
-Build 3 adds daily scheduling and weekly routines to the existing tablet-first Today dashboard and persistent task manager. The Next.js App Router, TypeScript, Tailwind CSS 4, Lucide icons, navigation, dark/light themes, and card design are preserved. No authentication, Supabase, AI, integrations, notifications, service workers, or automatic recurring-task generation are included.
+Build 3.5 adds alternating routines and persistent appearance settings alongside daily scheduling and weekly routines to the existing tablet-first Today dashboard and persistent task manager. The Next.js App Router, TypeScript, Tailwind CSS 4, Lucide icons, navigation, dark/light themes, and card design are preserved. No authentication, Supabase, AI, integrations, notifications, service workers, or automatic recurring-task generation are included.
 
 ## Run locally
 
@@ -39,7 +39,7 @@ npm run build
 - Today uses the browser's local calendar date. Only tasks scheduled for that date count toward progress, priorities, and the task timeline. Time-aware Right Now and Up Next are described below. Midnight updates the visible day without replacing saved tasks. The clock refreshes every 30 seconds and on focus/visibility changes after the device wakes.
 - Top 3 priorities shows up to three high-priority tasks scheduled for today. Recurring is informational; no future occurrences are generated.
 - Category pages show all saved tasks in that category, with dates and times. Journal remains a future-build placeholder.
-- Energy, theme, and task filters remain session-only preferences.
+- Energy and task filters remain session-only preferences. Theme and accent now persist.
 
 Validation requires a trimmed title of 1–160 characters, description of at most 4,000 characters, a known category/priority, a real calendar date, an optional valid 24-hour time, and whole-number duration of 1–1,440 minutes. Native form constraints and shared data-layer validation both apply.
 
@@ -47,7 +47,7 @@ Validation requires a trimmed title of 1–160 characters, description of at mos
 
 **Tasks are accomplishments; routines are time structure.** A commute or Work block is a ScheduleBlock, never a generated Task, and never counts toward task completion progress. Existing task records and the `daywell.tasks.v1` schema remain intact.
 
-The new **Schedule** navigation destination (`/schedule`) has Weekly routine and Specific date views. All seven weekdays are visible as cards, with timed blocks sorted chronologically and untimed blocks in a separate Flexible area. Use a day's large + button to add a block, or tap a block to edit its title, description, category, timing, and start/end. Remove asks for confirmation with Keep block focused first. Flexible blocks have no start/end times. Timed blocks must end after they start on the same local day; represent overnight routines as separate blocks on the two weekdays. Overlapping routine blocks are allowed; open-window calculation merges occupied ranges. No drag-and-drop is needed.
+The new **Schedule** navigation destination (`/schedule`) has Weekly routine, Specific date, and Alternating routines views. All seven weekdays are visible as cards, with timed blocks sorted chronologically and untimed blocks in a separate Flexible area. Use a day's large + button to add a block, or tap a block to edit its title, description, category, timing, and start/end. Remove asks for confirmation with Keep block focused first. Flexible blocks have no start/end times. Timed blocks must end after they start on the same local day; represent overnight routines as separate blocks on the two weekdays. Overlapping routine blocks are allowed; open-window calculation merges occupied ranges. No drag-and-drop is needed.
 
 First-run schedule defaults contain only:
 
@@ -60,9 +60,9 @@ Every default is editable/removable. No meals, content, bedtime, weekends, or so
 
 ### Date-only changes
 
-**Edit today** switches Schedule to the current local date. Specific date also supports any valid date. Add creates a date-only block. Editing/removing a template block from a date view (or Today) first asks where the change applies: **this date only** or **the weekly routine**. The editor clearly labels the chosen scope. Editing a date-only addition stays date-only. Weekly editing loads the actual template values, so a one-day replacement is not accidentally promoted to the recurring routine.
+**Edit today** switches Schedule to the current local date. Specific date also supports any valid date. Add creates a date-only block. Editing/removing a template block from a date view (or Today) first asks where the change applies: **this date only**, **the weekly routine**, or **the every-other-week routine** when one applies. The editor clearly labels the chosen scope. Editing a date-only addition stays date-only. Weekly editing loads the actual template values, so a one-day replacement is not accidentally promoted to the recurring routine.
 
-Overrides contain additions, replacements keyed by routine block ID, and removed IDs. They are patches, not copied days: unrelated weekly updates flow through, while explicit date replacements/removals remain. Removing a weekly block removes its related patches; date additions stay. Reset to weekly routine asks for confirmation before discarding that date's additions/edits/removals. Weekly edits apply wherever the template is calculated, including past dates without overrides; they are not historical snapshots.
+Overrides contain additions, replacements keyed by routine block ID, and removed IDs. They are patches, not copied days: unrelated weekly updates flow through, while explicit date replacements/removals remain. Removing a weekly block removes its related patches; date additions stay. Reset date-only changes asks for confirmation before discarding that date's additions/edits/removals. Weekly edits apply wherever the template is calculated, including past dates without overrides; they are not historical snapshots.
 
 ### Time-aware Today
 
@@ -79,7 +79,7 @@ Overrides contain additions, replacements keyed by routine block ID, and removed
 
 `lib/schedule.ts` centralizes ScheduleBlock, WeeklyRoutine, DateOverride, ScheduleData, validation, weekday/day resolution, flexible selectors, active/next routine selectors, and open-window calculation. `lib/agenda.ts` contains active/overdue/next task selectors, the combined timeline and Right Now/Up Next decisions, and non-destructive energy recommendations. `lib/date-time.ts` shares local date/time validation and formatting with tasks and routines; `lib/ids.ts` shares secure-context/LAN-compatible IDs.
 
-`lib/schedule-store.ts` exposes asynchronous `load`, `create`, `update`, `remove`, `resetDate`, and `subscribe` behind ScheduleStore. Its browser adapter stores `{ version: 1, schedule: { routines, overrides } }` at `daywell.schedule.v1`. It reads the latest durable data before each mutation and saves before the provider publishes a successful change. First-run seeding occurs **only when the key is absent**. Empty routines stay empty. Invalid JSON, unsupported versions, invalid times/dates, duplicate IDs/weekdays/override dates, and malformed patches produce an error without silently overwriting saved data. Failed forms retain their values; the shell provides Reload schedule. No automatic reset is performed.
+`lib/schedule-store.ts` exposes asynchronous `load`, `create`, `update`, `remove`, `resetDate`, and `subscribe` behind ScheduleStore. Its browser adapter stores `{ version: 2, schedule: { routines, overrides, recurringOverrides } }` at `daywell.schedule.v1`. It reads the latest durable data before each mutation and saves before the provider publishes a successful change. First-run seeding occurs **only when the key is absent**. Empty routines stay empty. Invalid JSON, unsupported versions, invalid times/dates, duplicate IDs/weekdays/override dates, and malformed patches produce an error without silently overwriting saved data. Failed forms retain their values; the shell provides Reload schedule. No automatic reset is performed.
 
 `components/schedule-provider.tsx` mounts storage after hydration and owns schedule state separately from tasks. The root layout preserves both providers across navigation; same-origin storage events refresh other tabs. A future Supabase adapter can implement ScheduleStore without changing the schedule forms or Today selectors. LocalStorage is still per browser/device/origin and uses last-write-wins across truly simultaneous tabs; it is not a backup or sync service.
 
@@ -106,7 +106,8 @@ To introduce Supabase later, implement `TaskStore` with authenticated database o
 - `components/task-components.tsx`: panels, category tags, clickable task rows, completion controls.
 - `components/today-dashboard.tsx`: preserved dashboard layout and task progress.
 - `components/today-agenda.tsx`: time-aware cards, combined timeline, still-open tasks, and energy suggestions.
-- `components/schedule-provider.tsx`, `schedule-page.tsx`, `schedule-dialogs.tsx`: independent schedule state, week/date views, and scoped block editor.
+- `components/schedule-provider.tsx`, `schedule-page.tsx`, `schedule-dialogs.tsx`, `alternating-dialog.tsx`: independent schedule state, week/date/alternating views, and scoped editors.
+- `components/settings-provider.tsx`, `settings-page.tsx`, `lib/settings.ts`, `settings-store.ts`: shared persisted appearance, selectable palettes, and prepaint application.
 - `components/section-page.tsx`: category destinations and task-manager routing.
 - `lib/tasks.ts`: centralized Task/TaskInput types, mock factory, validation, and filter/sort utilities.
 - `lib/schedule.ts`, `schedule-store.ts`, `agenda.ts`, `date-time.ts`, `ids.ts`: routine domain, persistence, selectors, and shared utilities.
@@ -124,4 +125,30 @@ Run the commands above before committing. The task and schedule suites check fir
 
 The existing manifest, standalone display mode, theme metadata, and icons provide PWA groundwork. Offline caching, service workers, push notifications, and guaranteed installability remain deferred. Local task persistence does not make the application's code available offline.
 
-For Vercel later, import this application directory as the project root and use the Next.js preset with `npm run build`. No environment variables are required in Build 3. Deployment is deferred.
+For Vercel later, import this application directory as the project root and use the Next.js preset with `npm run build`. No environment variables are required in Build 3.5. Deployment is deferred.
+
+## Build 3.5: alternating routines
+
+Schedule now includes **Alternating routines**. Choose Add alternating routine, give it a name and weekday, and choose a known occurrence as its anchor date. No remote Friday pattern is created automatically. Edit that version of the weekday to remove commutes or replace Work with Remote Work. Removed or replaced weekly blocks can be restored with Use weekly block. Name and anchor can be edited; changing weekday requires a new routine. Deletion confirms first.
+
+Matching uses a signed calendar-day difference divisible by 14 and an exact weekday match. Dates before and after the anchor match; month/year boundaries and daylight saving changes do not affect the cycle. No ISO week parity or elapsed local timestamps are used. Each weekday allows one routine per alternating phase; overlapping rules in the same phase are rejected.
+
+Resolution is **weekly routine → matching alternating routine → date-specific changes**. Specific date identifies the normal or alternating source and separately labels date-only changes. Editing an affected block offers explicit weekly, every-other-week, and date-only scopes, loading the actual values for that scope. Reset date-only changes returns to the repeating schedule, including any matching alternating routine. Removing an alternating routine restores weekly blocks and preserves explicit date edits, including edits to its added blocks.
+
+### Safe schedule migration
+
+The existing `daywell.schedule.v1` key is retained, but its envelope becomes version 2. A valid Build 3 version 1 record is copied exactly to `daywell.schedule.backup.v1` before migration. Existing routines and date patches are preserved, with `recurringOverrides: []`; no defaults replace user data. Migration runs once. If either write fails, the original version 1 record remains intact. Corrupt or unsupported data is reported and kept unchanged. Task storage is unaffected.
+
+## Appearance settings
+
+`/settings`, reached through the gear near the bottom of the sidebar or phone More menu, offers Dark/Light and six visual accent choices: Green (default), Blue, Purple, Red, Orange, and Yellow. Changes apply and save automatically. The sidebar theme shortcut shares the same state. Neutral surfaces and category colors retain their identity.
+
+`lib/settings.ts` defines settings and both-theme palettes. Semantic accent, hover, foreground, soft, and border tokens drive buttons, navigation, selected controls, progress, agenda highlights, and focus states. Yellow uses dark text in dark mode and a deeper gold with white text in light mode. Palette tests verify normal-text contrast for buttons, hover states, and accent highlights in both themes.
+
+`lib/settings-store.ts` owns `daywell.settings.v1`, validation, asynchronous load/update, and storage subscriptions. `components/settings-provider.tsx` supplies one shared source of truth. A read-only, validated head bootstrap sets root theme/accent attributes before painting; the provider hydrates consistently and loads the same record after mounting. Invalid records and failed writes are surfaced without overwriting saved preferences. Settings follow the same browser/device/origin persistence limits as tasks and schedules.
+
+Additional tests in `tests/alternating.test.mjs` and `tests/settings.test.mjs` cover migration and failed writes, anchor/year/DST boundaries, precedence, rule CRUD, preserved weekly/date data, corrupt recurring records, settings persistence, prepaint validation, and palette contrast.
+
+Production builds use Next.js’s supported Webpack builder (`next build --webpack`) because the restricted development environment prevents Turbopack’s internal CSS worker from binding a port. Application behavior and deployment remain standard Next.js.
+
+Build 3.5 browser checks verified saved light/yellow preferences after refresh, the shared sidebar theme shortcut, alternating creation and block-edit persistence, matching/off-week source labels, and the three editing scopes loading the correct weekly values. Settings showed no horizontal overflow at 390px, 800px, 1024px, or 1440px, with no console errors. These checks use simulated viewports, not physical-device tests.

@@ -32,3 +32,13 @@ export function formatDate(value: string): string {
 export function localTimestamp(date: string, time: string): number {
   return new Date(`${date}T${time}:00`).getTime();
 }
+
+// Project date components onto UTC solely to count calendar days, never local hours.
+export function calendarDayNumber(date: string): number {
+  if (!isValidDate(date)) throw new Error("Choose a valid date.");
+  const [year, month, day] = date.split("-").map(Number);
+  const calendar = new Date(0);
+  calendar.setUTCHours(0, 0, 0, 0);
+  calendar.setUTCFullYear(year, month - 1, day);
+  return calendar.getTime() / 86400000;
+}

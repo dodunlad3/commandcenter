@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TaskProvider } from "@/components/task-provider";
 import { ScheduleProvider } from "@/components/schedule-provider";
+import { SettingsProvider } from "@/components/settings-provider";
+import { appearanceCss } from "@/lib/settings";
+import { settingsBootstrapScript } from "@/lib/settings-store";
 import { AppShell } from "@/components/app-shell";
 export const metadata: Metadata = {
   title: "Daywell · Your personal command center",
@@ -25,13 +28,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: appearanceCss }} />
+        <script dangerouslySetInnerHTML={{ __html: settingsBootstrapScript }} />
+      </head>
       <body>
-        <TaskProvider>
-          <ScheduleProvider>
-            <AppShell>{children}</AppShell>
-          </ScheduleProvider>
-        </TaskProvider>
+        <SettingsProvider>
+          <TaskProvider>
+            <ScheduleProvider>
+              <AppShell>{children}</AppShell>
+            </ScheduleProvider>
+          </TaskProvider>
+        </SettingsProvider>
       </body>
     </html>
   );
